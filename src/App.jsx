@@ -879,7 +879,7 @@ function SquadCard({ squad, onVoted }) {
             <div style={{ textAlign: "center" }}>
               <div style={{ fontFamily: "Anton", fontSize: 24, color: COLORS.cyan }}>{avg}</div>
               <div style={{ fontFamily: "Rajdhani", fontSize: 11, color: COLORS.muted }}>
-                {squad.votes.count} voti
+                media voti
               </div>
             </div>
           )}
@@ -1534,6 +1534,30 @@ export default function App() {
         <HelpCircle size={18} />
       </button>
 
+      {tab === "calc" && saveStatus && (
+        <div
+          style={{
+            position: "fixed",
+            top: 16,
+            right: 58,
+            zIndex: 40,
+            width: 34,
+            height: 34,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: saveStatus === "saved" ? COLORS.cyan : COLORS.muted,
+          }}
+          title={saveStatus === "saving" ? "Salvataggio in corso" : "Salvato"}
+        >
+          {saveStatus === "saving" ? (
+            <Loader2 size={16} className="spin" />
+          ) : (
+            <Check size={16} />
+          )}
+        </div>
+      )}
+
       <div style={{ maxWidth: 960, margin: "0 auto" }}>
         <div style={{ textAlign: "center", marginBottom: 26 }}>
           <Eyebrow>Fantacalcio</Eyebrow>
@@ -1551,23 +1575,6 @@ export default function App() {
           <div style={{ fontFamily: "Rajdhani", color: COLORS.muted, fontSize: 15, marginTop: 4 }}>
             Gestisci il budget in tempo reale e confronta la tua squadra con la community
           </div>
-          {tab === "calc" && saveStatus && (
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                marginTop: 8,
-                color: saveStatus === "saved" ? COLORS.cyan : COLORS.muted,
-              }}
-            >
-              {saveStatus === "saving" ? (
-                <Loader2 size={14} className="spin" />
-              ) : (
-                <Check size={14} />
-              )}
-            </div>
-          )}
         </div>
 
         <div style={{ display: "flex", gap: 8, marginBottom: 22, justifyContent: "center" }}>
