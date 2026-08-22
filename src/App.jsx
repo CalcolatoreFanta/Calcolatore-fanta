@@ -1376,7 +1376,6 @@ function BottomActionBar({ squadState }) {
 // ---------------------------------------------------------------------------
 // App
 // ---------------------------------------------------------------------------
-const DRAFT_KEY = "calculator-draft";
 
 // ---------------------------------------------------------------------------
 // Guida rapida
@@ -1459,35 +1458,12 @@ export default function App() {
     budget: 1000,
     players: { Portieri: [], Difensori: [], Centrocampisti: [], Attaccanti: [] },
   });
-  const [loaded, setLoaded] = useState(false);
-  const [saveStatus, setSaveStatus] = useState(""); // "", "saving", "saved"
   const [showGuide, setShowGuide] = useState(false);
-  const saveTimer = useRef(null);
 
-  // Carica la bozza salvata (se c'e') al primo avvio, e mostra la guida se e' la prima visita
+  // Ogni visita parte con la pagina vuota, pronta per l'uso: nessuna bozza viene
+  // ricordata da una sessione all'altra. Mostriamo solo la guida, se e' la prima volta.
   useEffect(() => {
     (async () => {
-      try {
-        const r = await storage.get(DRAFT_KEY, false);
-        if (r && r.value) {
-          const parsed = JSON.parse(r.value);
-          setSquadState({
-            teamName: parsed.teamName || "",
-            budget: parsed.budget ?? 1000,
-            players: parsed.players || {
-              Portieri: [],
-              Difensori: [],
-              Centrocampisti: [],
-              Attaccanti: [],
-            },
-          });
-        }
-      } catch {
-        // nessuna bozza salvata o non disponibile: si parte da zero
-      } finally {
-        setLoaded(true);
-      }
-
       try {
         const seen = await storage.get("seen-guide", false);
         if (!seen) {
@@ -1499,51 +1475,6 @@ export default function App() {
       }
     })();
   }, []);
-
-  // Salva automaticamente ogni modifica, con un piccolo ritardo per non sovraccaricare
-  useEffect(() => {
-    if (!loaded) return;
-    setSaveStatus("saving");
-    if (saveTimer.current) clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(async () => {
-      try {
-        await storage.set(DRAFT_KEY, JSON.stringify(squadState), false);
-        setSaveStatus("saved");
-        setTimeout(() => setSaveStatus(""), 1500);
-      } catch {
-        setSaveStatus("");
-      }
-    }, 700);
-    return () => clearTimeout(saveTimer.current);
-  }, [squadState, loaded]);
-
-  // Salvataggio immediato quando l'app va in background (cambio app, blocco schermo, minimizzazione):
-  // non aspettiamo il ritardo normale, cosi' non si perde l'ultima modifica
-  const squadStateRef = useRef(squadState);
-  useEffect(() => {
-    squadStateRef.current = squadState;
-  }, [squadState]);
-
-  useEffect(() => {
-    if (!loaded) return;
-    const flushSave = () => {
-      if (saveTimer.current) clearTimeout(saveTimer.current);
-      try {
-        storage.set(DRAFT_KEY, JSON.stringify(squadStateRef.current), false);
-      } catch {
-        // se non riesce, non c'e' altro da fare in questo momento
-      }
-    };
-    const onVisibilityChange = () => {
-      if (document.visibilityState === "hidden") flushSave();
-    };
-    document.addEventListener("visibilitychange", onVisibilityChange);
-    window.addEventListener("pagehide", flushSave);
-    return () => {
-      document.removeEventListener("visibilitychange", onVisibilityChange);
-      window.removeEventListener("pagehide", flushSave);
-    };
-  }, [loaded]);
 
   return (
     <div
@@ -1586,30 +1517,6 @@ export default function App() {
       >
         <HelpCircle size={18} />
       </button>
-
-      {tab === "calc" && saveStatus && (
-        <div
-          style={{
-            position: "fixed",
-            top: 16,
-            right: 58,
-            zIndex: 40,
-            width: 34,
-            height: 34,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: saveStatus === "saved" ? COLORS.cyan : COLORS.muted,
-          }}
-          title={saveStatus === "saving" ? "Salvataggio in corso" : "Salvato"}
-        >
-          {saveStatus === "saving" ? (
-            <Loader2 size={16} className="spin" />
-          ) : (
-            <Check size={16} />
-          )}
-        </div>
-      )}
 
       <div style={{ maxWidth: 960, margin: "0 auto" }}>
         <div style={{ textAlign: "center", marginBottom: 26 }}>
