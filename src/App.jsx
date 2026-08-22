@@ -189,12 +189,27 @@ async function drawShareCanvas({ title, stats, players, footer }) {
   cursorY += ROW_H; // fine reale della lista (sotto l'ultima riga)
   cursorY += GAP_LIST_SIGNATURE;
 
-  // firma in basso: "calcolatore" in ciano + "fanta.it" in bianco, centrata, lettere distanziate
-  ctx.font = "800 36px Montserrat";
+  // firma in basso: "calcolatore" in ciano + "fanta" in bianco + il resto dell'indirizzo attuale,
+  // ridimensionata automaticamente se il testo e' troppo lungo per stare in una riga
   const sigSegments = [
     { text: "calcolatore", color: "#00E5FF" },
-    { text: "fanta.it", color: "#F4F7FF" },
+    { text: "fanta", color: "#F4F7FF" },
+    { text: ".netlify.app", color: "#8CA3E0" },
   ];
+  let sigFontSize = 36;
+  const maxSigW = W - 112;
+  while (sigFontSize > 16) {
+    ctx.font = `800 ${sigFontSize}px Montserrat`;
+    const totalChars = sigSegments.reduce((n, s) => n + s.text.length, 0);
+    let w = 0;
+    sigSegments.forEach((s) => {
+      for (const ch of s.text) w += ctx.measureText(ch).width;
+    });
+    w += 3 * (totalChars - 1);
+    if (w <= maxSigW) break;
+    sigFontSize -= 2;
+  }
+  ctx.font = `800 ${sigFontSize}px Montserrat`;
   const sigChars = [];
   sigSegments.forEach((seg) => {
     for (const ch of seg.text) sigChars.push({ ch, color: seg.color });
