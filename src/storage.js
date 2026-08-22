@@ -75,4 +75,27 @@ export const storage = {
     if (error) throw error;
     return { keys: (data || []).map((r) => r.key), prefix, shared: true };
   },
+
+  /**
+   * Come list(), ma restituisce anche il contenuto di ogni voce in un'unica
+   * richiesta, invece di doverle leggere una per una dopo. Usato dalla Bacheca
+   * per caricare tutte le squadre pubblicate senza tante chiamate separate.
+   */
+  async listWithValues(prefix = "", shared = false) {
+    if (!shared) {
+      const items = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith(prefix)) items.push({ key: k, value: localStorage.getItem(k) });
+      }
+      return items;
+    }
+    if (!supabase) throw new Error("Supabase non configurato");
+    const { data, error } = await supabase
+      .from(TABLE)
+      .select("key, value")
+      .like("key", `${prefix}%`);
+    if (error) throw error;
+    return (data || []).map((r) => ({ key: r.key, value: r.value }));
+  },
 };
