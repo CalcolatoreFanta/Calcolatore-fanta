@@ -1,6 +1,10 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Plus, Trash2, Shield, Star, Send, Users, Wallet, Sparkles, ChevronRight, Loader2, Share2, ArrowRight, Check, AlertTriangle, RotateCcw, ArrowUpDown, HelpCircle, X } from "lucide-react";
 import { storage } from "./storage.js";
+import QRCode from "qrcode";
+
+// Indirizzo del sito: aggiornalo qui quando si passa al dominio vero (es. calcolatorefanta.it)
+const SITE_URL = "https://calcolatorefanta.netlify.app";
 
 // ---------------------------------------------------------------------------
 // Design tokens (coerenti con la copertina: blu elettrico / esports)
@@ -128,9 +132,43 @@ async function drawShareCanvas({ title, stats, players, footer }) {
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, W, H);
 
+  // genera il QR code che porta al sito, da disegnare in alto a destra
+  let qrImg = null;
+  try {
+    const qrDataUrl = await QRCode.toDataURL(SITE_URL, {
+      width: 240,
+      margin: 0,
+      color: { dark: "#0E1638", light: "#FFFFFF" },
+    });
+    qrImg = await new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = reject;
+      img.src = qrDataUrl;
+    });
+  } catch {
+    qrImg = null; // se la generazione fallisce, l'immagine si crea comunque senza QR
+  }
+
   ctx.fillStyle = "#00E5FF";
   ctx.font = "700 24px Rajdhani";
   ctx.fillText("CALCOLATORE FANTA", MARGIN_X, TOP_MARGIN);
+
+  if (qrImg) {
+    const qrSize = 84;
+    const qrX = W - MARGIN_X - qrSize;
+    const qrY = TOP_MARGIN - 38;
+    const pad = 8;
+    ctx.fillStyle = "#FFFFFF";
+    if (ctx.roundRect) {
+      ctx.beginPath();
+      ctx.roundRect(qrX - pad, qrY - pad, qrSize + pad * 2, qrSize + pad * 2, 10);
+      ctx.fill();
+    } else {
+      ctx.fillRect(qrX - pad, qrY - pad, qrSize + pad * 2, qrSize + pad * 2);
+    }
+    ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
+  }
 
   ctx.fillStyle = "#F4F7FF";
   ctx.font = "56px Anton";
