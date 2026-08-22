@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { Plus, Trash2, Shield, Star, Send, Users, Wallet, Sparkles, ChevronRight, Loader2, Share2, ArrowRight, Check, AlertTriangle, RotateCcw, ArrowUpDown, HelpCircle, X } from "lucide-react";
+import { Plus, Trash2, Shield, Star, Send, Users, Wallet, ChevronRight, Loader2, Share2, ArrowRight, AlertTriangle, RotateCcw, HelpCircle, X } from "lucide-react";
 import { storage } from "./storage.js";
 import QRCode from "qrcode";
 
@@ -27,20 +27,6 @@ const CATEGORIES = [
   { key: "Centrocampisti", label: "Centrocampisti", slots: 8 },
   { key: "Attaccanti", label: "Attaccanti", slots: 6 },
 ];
-
-const FONT_IMPORT_ID = "asta-fc-fonts";
-
-function useFonts() {
-  useEffect(() => {
-    if (document.getElementById(FONT_IMPORT_ID)) return;
-    const link = document.createElement("link");
-    link.id = FONT_IMPORT_ID;
-    link.rel = "stylesheet";
-    link.href =
-      "https://fonts.googleapis.com/css2?family=Anton&family=Rajdhani:wght@500;600;700&family=Montserrat:wght@800&display=swap";
-    document.head.appendChild(link);
-  }, []);
-}
 
 function uid() {
   return Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
@@ -685,7 +671,6 @@ function Calculator({ squadState, setSquadState }) {
 function PublishForm({ squadState, onPublished }) {
   const [participants, setParticipants] = useState("");
   const [comment, setComment] = useState("");
-  const [wantAiScore, setWantAiScore] = useState(true);
   const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState("");
 
@@ -696,25 +681,6 @@ function PublishForm({ squadState, onPublished }) {
   );
 
   const totalSpeso = flatPlayers.reduce((s, p) => s + p.price, 0);
-
-  const getAiRating = async (payload) => {
-    // tutta la logica del prompt e la chiave API vivono nella funzione serverless
-    // (netlify/functions/ai-rating.js), mai nel codice che gira nel browser
-    const res = await fetch("/.netlify/functions/ai-rating", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ payload }),
-    });
-    if (!res.ok) {
-      const errBody = await res.text().catch(() => "");
-      throw new Error(`Voto IA non disponibile (${res.status}): ${errBody}`);
-    }
-    const result = await res.json();
-    return {
-      score: Math.max(1, Math.min(10, Math.round(Number(result.score) || 0))),
-      comment: String(result.comment || "").slice(0, 400),
-    };
-  };
 
   const publish = async () => {
     setError("");
@@ -738,20 +704,7 @@ function PublishForm({ squadState, onPublished }) {
         comment: comment.trim(),
         createdAt: Date.now(),
         votes: { sum: 0, count: 0 },
-        ai: null,
       };
-
-      if (wantAiScore) {
-        try {
-          squad.ai = await getAiRating({
-            budget: squad.budget,
-            participants: squad.participants,
-            players: squad.players,
-          });
-        } catch (e) {
-          squad.ai = null; // se l'IA fallisce, pubblichiamo comunque la squadra
-        }
-      }
 
       await storage.set(`squad:${squad.id}`, JSON.stringify(squad), true);
       setComment("");
@@ -814,39 +767,6 @@ function PublishForm({ squadState, onPublished }) {
         rows={2}
         style={{ ...inputStyle, resize: "vertical", marginTop: 6 }}
       />
-
-      <label
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
-          marginTop: 12,
-          fontFamily: "Rajdhani",
-          color: COLORS.muted,
-          fontSize: 14,
-          cursor: "pointer",
-        }}
-      >
-        <input
-          type="checkbox"
-          checked={wantAiScore}
-          onChange={(e) => setWantAiScore(e.target.checked)}
-        />
-        Chiedi anche un voto all'IA
-      </label>
-      {wantAiScore && (
-        <div
-          style={{
-            fontFamily: "Rajdhani",
-            color: COLORS.muted,
-            fontSize: 12,
-            marginTop: 4,
-            marginLeft: 24,
-          }}
-        >
-          È un giudizio automatico basato solo sui dati che inserisci (prezzi, equilibrio budget) — un tocco divertente, non un parere da esperto.
-        </div>
-      )}
 
       {error && (
         <div style={{ color: "#FF6B6B", fontFamily: "Rajdhani", marginTop: 10 }}>
@@ -916,8 +836,16 @@ function SquadCard({ squad, onVoted }) {
   return (
     <AngularCard>
       <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
-        <div>
-          <div style={{ fontFamily: "Anton", fontSize: 22, color: COLORS.white }}>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div
+            style={{
+              fontFamily: "Anton",
+              fontSize: 22,
+              color: COLORS.white,
+              overflowWrap: "break-word",
+              wordBreak: "break-word",
+            }}
+          >
             {squad.name}
           </div>
           <div style={{ fontFamily: "Rajdhani", color: COLORS.muted, fontSize: 13, display: "flex", gap: 14, marginTop: 2 }}>
@@ -936,53 +864,8 @@ function SquadCard({ squad, onVoted }) {
               </div>
             </div>
           )}
-          {squad.ai && (
-            <div
-              title="Voto generato dall'IA in base ai dati inseriti: un tocco divertente, non un parere da esperto"
-              style={{
-                textAlign: "center",
-                border: `1px solid ${COLORS.primary}`,
-                borderRadius: 10,
-                padding: "4px 10px",
-              }}
-            >
-              <div style={{ fontFamily: "Anton", fontSize: 20, color: COLORS.amber, display: "flex", alignItems: "center", gap: 4 }}>
-                <Sparkles size={14} /> {squad.ai.score}
-              </div>
-              <div style={{ fontFamily: "Rajdhani", fontSize: 10, color: COLORS.muted }}>voto IA</div>
-            </div>
-          )}
         </div>
       </div>
-
-      {squad.ai?.comment && (
-        <div>
-          <div
-            style={{
-              fontFamily: "Rajdhani",
-              fontStyle: "italic",
-              color: COLORS.amber,
-              fontSize: 13,
-              marginTop: 10,
-              borderLeft: `2px solid ${COLORS.amber}`,
-              paddingLeft: 10,
-            }}
-          >
-            "{squad.ai.comment}"
-          </div>
-          <div
-            style={{
-              fontFamily: "Rajdhani",
-              color: COLORS.muted,
-              fontSize: 11,
-              marginTop: 3,
-              paddingLeft: 10,
-            }}
-          >
-            Voto IA per gioco, non un'analisi statistica reale
-          </div>
-        </div>
-      )}
 
       {squad.comment && (
         <div style={{ fontFamily: "Rajdhani", color: COLORS.white, fontSize: 14, marginTop: 10 }}>
@@ -1003,6 +886,9 @@ function SquadCard({ squad, onVoted }) {
               border: `1px solid ${COLORS.border}`,
               borderRadius: 6,
               padding: "4px 8px",
+              maxWidth: "100%",
+              overflowWrap: "break-word",
+              wordBreak: "break-word",
             }}
           >
             {p.name} <span style={{ color: COLORS.cyan }}>{currency(p.price)}</span>
@@ -1064,17 +950,15 @@ function Board({ squadState }) {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const listRes = await storage.list("squad:", true);
-      const keys = listRes?.keys || [];
-      const items = [];
-      for (const k of keys) {
+      const items = await storage.listWithValues("squad:", true);
+      const parsed = [];
+      for (const item of items) {
         try {
-          const r = await storage.get(k, true);
-          if (r) items.push(JSON.parse(r.value));
+          parsed.push(JSON.parse(item.value));
         } catch {}
       }
-      items.sort((a, b) => b.createdAt - a.createdAt);
-      setSquads(items);
+      parsed.sort((a, b) => b.createdAt - a.createdAt);
+      setSquads(parsed);
     } catch {
       setSquads([]);
     } finally {
@@ -1451,7 +1335,6 @@ function GuideModal({ onClose }) {
 }
 
 export default function App() {
-  useFonts();
   const [tab, setTab] = useState("calc");
   const [squadState, setSquadState] = useState({
     teamName: "",
