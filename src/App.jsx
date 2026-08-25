@@ -260,7 +260,10 @@ async function shareSquadImage(payload) {
     await navigator.share({
       files: [file],
       title: "La mia squadra",
-      text: "Guarda la mia squadra del fantacalcio!",
+      // il link e' incluso anche dentro il testo, perche' molte app (WhatsApp compresa)
+      // ignorano il campo "url" separato quando si condivide anche un'immagine
+      text: `Guarda la mia squadra del fantacalcio! ${SITE_URL}`,
+      url: SITE_URL,
     });
   } else {
     const url = URL.createObjectURL(blob);
